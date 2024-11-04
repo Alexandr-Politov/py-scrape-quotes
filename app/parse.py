@@ -26,13 +26,27 @@ def parse_single_quote(quote_soup: BeautifulSoup) -> Quote:
         )
 
 
-def get_quotes() -> [Quote]:
-    page_content = requests.get(BASE_URL).content
-    soup = BeautifulSoup(page_content, "html.parser")
-
-    quotes = soup.select(".quote")
-
+def get_single_page_quotes(page_soup: BeautifulSoup) -> [Quote]:
+    quotes = page_soup.select(".quote")
     return [parse_single_quote(quote_soup) for quote_soup in quotes]
+
+
+def get_quotes_from_all_pages() -> [Quote]:
+    quotes = []
+    page_number = 1
+    while True:
+        print(f"parsing page {page_number}")
+        url = (BASE_URL + f"page/{page_number}/")
+        page_content = requests.get(url).content
+        page_soup = BeautifulSoup(page_content, "html.parser")
+        quotes.extend(get_single_page_quotes(page_soup))
+        page_number += 1
+
+        next_button = page_soup.select_one("li.next > a")
+        if not next_button:
+            break
+
+    return quotes
 
 
 def write_quotes_to_csv(quotes: [Quote], output_csv_path: str) -> None:
@@ -43,7 +57,7 @@ def write_quotes_to_csv(quotes: [Quote], output_csv_path: str) -> None:
 
 
 def main(output_csv_path: str) -> None:
-    quotes = get_quotes()
+    quotes = get_quotes_from_all_pages()
     write_quotes_to_csv(quotes, output_csv_path)
 
 
